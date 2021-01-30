@@ -44,14 +44,15 @@ func (server *Server) Run() {
 	fmt.Println("Server started on", server.host, server.port)
 
 	for {
-		client, acceptError := server.listener.Accept()
+		connection, acceptError := server.listener.Accept()
 		if acceptError != nil {
 			fmt.Println("Error connecting:", acceptError.Error())
-			return
-		}
-		fmt.Println("Client connected.")
+		} else {
+			fmt.Println("Client from", connection.RemoteAddr().String(), " connected.")
 
-		fmt.Println("Client " + client.RemoteAddr().String() + " connected.")
+			client := user.NewClient(connection)
+			go client.Run()
+		}
 	}
 
 	//go server.room.Run()

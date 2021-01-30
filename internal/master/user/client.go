@@ -1,19 +1,20 @@
 package user
 
 import (
+	"bufio"
+	"fmt"
 	"log"
-
-	"github.com/gorilla/websocket"
+	"net"
 )
 
 type Client struct {
 	user       *User
-	connection *websocket.Conn
+	connection net.Conn
 	Room       *Room
 	send       chan []byte
 }
 
-func NewClient(connection *websocket.Conn) *Client {
+func NewClient(connection net.Conn) *Client {
 	return &Client{
 		connection: connection,
 		send:       make(chan []byte, 1024),
@@ -21,48 +22,40 @@ func NewClient(connection *websocket.Conn) *Client {
 }
 
 func (client *Client) Run() {
+	defer client.connection.Close()
+
 	go client.write()
 	client.read()
 }
 
 func (client *Client) read() {
+	reader := bufio.NewReader(client.connection)
+
+	buffer := make([]byte, 256)
+
 	for {
-		messageType, message, err := client.connection.ReadMessage()
-		if err == nil {
+		bytesRead, readError := reader.Read(buffer)
 
-			if messageType == websocket.TextMessage {
-				log.Printf("Received %s\n", message)
-				client.Room.commands <- Command{command: SendMessage, client: client, message: message}
-			} else if messageType == websocket.BinaryMessage {
-
-			}
-
-		} else {
-			//if err != io.EOF {
-			log.Println("Failed to read message", err)
-			//}
-			break
+		if readError != nil {
+			fmt.Println("Client left.")
+			return
 		}
-	}
 
-	client.connection.Close()
+		fmt.Println("Read", bytesRead, "bytes")
+	}
 }
 
 func (client *Client) write() {
 	for message := range client.send {
-		err := client.connection.WriteMessage(websocket.TextMessage, message)
+		bytesWritten, writeError := client.connection.Write(message)
 
-		if err != nil {
+		if writeError != nil {
 			//if err != io.EOF {
-			log.Println("Failed to write message", err)
+			log.Println("Failed to write message", writeError)
 			//}
 			break
 		}
+
+		fmt.Println("Written", bytesWritten, "bytes")
 	}
-
-	client.connection.Close()
-}
-
-func (client *Client) logIn(username string, password string) {
-	// TODO: get user from database and assign to user
 }
