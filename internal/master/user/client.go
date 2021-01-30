@@ -1,7 +1,6 @@
 package user
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"net"
@@ -29,12 +28,10 @@ func (client *Client) Run() {
 }
 
 func (client *Client) read() {
-	reader := bufio.NewReader(client.connection)
-
 	buffer := make([]byte, 256)
 
 	for {
-		bytesRead, readError := reader.Read(buffer)
+		bytesRead, readError := client.connection.Read(buffer)
 
 		if readError != nil {
 			fmt.Println("Client left.")
